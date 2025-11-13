@@ -16,11 +16,19 @@ export interface AnalysisResult {
   improvements: string[];
 }
 
+export interface JobSuggestion {
+  title: string;
+  description: string;
+  matchReason: string;
+}
+
 const Index = () => {
   const [resumeText, setResumeText] = useState("");
   const [jobDescText, setJobDescText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSuggestingJobs, setIsSuggestingJobs] = useState(false);
   const [results, setResults] = useState<AnalysisResult | null>(null);
+  const [jobSuggestions, setJobSuggestions] = useState<JobSuggestion[]>([]);
   const { toast } = useToast();
 
   const handleAnalyze = async () => {
@@ -59,9 +67,16 @@ const Index = () => {
         jobEmbedding.data
       );
 
-      // Convert similarity to ATS score (0-100)
-      const atsScore = Math.round(similarity * 100);
-      const matchLikelihood = Math.min(100, atsScore + 5);
+      // Improved ATS scoring algorithm
+      // Normalize similarity to be more realistic (0.3-0.9 range mapped to 20-95)
+      const normalizedSimilarity = Math.max(0, Math.min(1, similarity));
+      const atsScore = Math.round(20 + (normalizedSimilarity * 75));
+      
+      // Match likelihood considers multiple factors
+      const lengthRatio = Math.min(resumeText.length, jobDescText.length) / 
+                         Math.max(resumeText.length, jobDescText.length);
+      const lengthPenalty = lengthRatio < 0.3 ? 10 : 0;
+      const matchLikelihood = Math.max(10, Math.min(95, atsScore - lengthPenalty));
 
       // Get AI feedback
       const response = await fetch(
@@ -107,6 +122,55 @@ const Index = () => {
       });
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleSuggestJobs = async () => {
+    if (!resumeText.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide your resume to get job suggestions",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSuggestingJobs(true);
+    setJobSuggestions([]);
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/suggest-jobs`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ resume: resumeText }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to get job suggestions");
+      }
+
+      const data = await response.json();
+      setJobSuggestions(data.suggestions || []);
+
+      toast({
+        title: "Job Suggestions Ready",
+        description: "AI has suggested relevant jobs based on your resume",
+      });
+    } catch (error) {
+      console.error("Job suggestion error:", error);
+      toast({
+        title: "Suggestion Failed",
+        description: "There was an error suggesting jobs. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSuggestingJobs(false);
     }
   };
 
@@ -167,12 +231,12 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* Analyze Button */}
-        <div className="flex justify-center mb-8">
+        {/* Action Buttons */}
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
           <Button
             size="lg"
             onClick={handleAnalyze}
-            disabled={isAnalyzing}
+            disabled={isAnalyzing || !resumeText.trim() || !jobDescText.trim()}
             className="bg-gradient-to-r from-primary to-primary-glow hover:opacity-90 text-primary-foreground px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all"
           >
             {isAnalyzing ? (
@@ -187,10 +251,63 @@ const Index = () => {
               </>
             )}
           </Button>
+
+          <Button
+            size="lg"
+            onClick={handleSuggestJobs}
+            disabled={isSuggestingJobs || !resumeText.trim()}
+            variant="outline"
+            className="px-8 py-6 text-lg shadow-lg hover:shadow-xl transition-all border-primary/30 hover:bg-primary/5"
+          >
+            {isSuggestingJobs ? (
+              <>
+                <Briefcase className="mr-2 h-5 w-5 animate-pulse" />
+                Finding Jobs...
+              </>
+            ) : (
+              <>
+                <Briefcase className="mr-2 h-5 w-5" />
+                Suggest Jobs
+              </>
+            )}
+          </Button>
         </div>
 
         {/* Results */}
         {results && <AnalysisResults results={results} />}
+
+        {/* Job Suggestions */}
+        {jobSuggestions.length > 0 && (
+          <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Card className="p-6 shadow-lg border-border/50">
+              <div className="flex items-center gap-2 mb-6">
+                <Briefcase className="h-6 w-6 text-primary" />
+                <h2 className="text-xl font-semibold">Recommended Jobs</h2>
+              </div>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {jobSuggestions.map((job, index) => (
+                  <Card
+                    key={index}
+                    className="p-5 border-border/40 hover:border-primary/40 hover:shadow-md transition-all"
+                  >
+                    <h3 className="font-semibold text-lg mb-2 text-foreground">
+                      {job.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {job.description}
+                    </p>
+                    <div className="flex items-start gap-2 pt-3 border-t border-border/30">
+                      <Sparkles className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-foreground/70 italic">
+                        {job.matchReason}
+                      </p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   );

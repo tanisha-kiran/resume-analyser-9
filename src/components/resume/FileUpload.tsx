@@ -16,51 +16,31 @@ export const FileUpload = ({ onTextExtracted }: FileUploadProps) => {
       if (!file) return;
 
       try {
-        if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-          // Use document parsing for PDF
-          const formData = new FormData();
-          formData.append("file", file);
+        // Upload file to parse it properly
+        const formData = new FormData();
+        formData.append("file", file);
 
-          // For now, use FileReader to get text from PDF
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const text = e.target?.result as string;
-            onTextExtracted(text);
-            toast({
-              title: "File Uploaded",
-              description: "Your document has been processed",
-            });
-          };
-          reader.readAsText(file);
-        } else if (
-          file.type ===
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-          file.name.endsWith(".docx")
-        ) {
-          // Handle DOCX files
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const text = e.target?.result as string;
-            onTextExtracted(text);
-            toast({
-              title: "File Uploaded",
-              description: "Your document has been processed",
-            });
-          };
-          reader.readAsText(file);
-        } else {
-          // Plain text file
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const text = e.target?.result as string;
-            onTextExtracted(text);
-            toast({
-              title: "File Uploaded",
-              description: "Your document has been processed",
-            });
-          };
-          reader.readAsText(file);
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-document`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to parse document");
         }
+
+        const data = await response.json();
+        onTextExtracted(data.text || "");
+        toast({
+          title: "File Uploaded",
+          description: "Your document has been processed",
+        });
       } catch (error) {
         console.error("File upload error:", error);
         toast({
