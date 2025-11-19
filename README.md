@@ -1,18 +1,37 @@
-# Welcome to your Lovable project
+AI-Powered Resume Analyzer (ATS Optimizer)
 
-## Project info
+This project is an intelligent Resume Analysis and Job Matching system that applies Machine Learning and Natural Language Processing (NLP) techniques to evaluate resumes, predict job domains, extract skills, and provide ATS optimization suggestions. The goal is to help job seekers enhance their resumes to meet industry standards and employer requirements.
 
-**URL**: https://lovable.dev/projects/e2c8fc4b-1667-4976-ae4b-5364d4172f3c
+Key Features
+Evaluates resume quality and calculates an ATS score based on formatting, keywords, and skill relevance.
+Extracts hard and soft skills from resumes using NLP.
+Classifies resumes into job categories such as Data Science, HR, Software Engineering, Finance, Aviation, and more.
+Compares resume content with job descriptions to recommend missing keywords.
+Generates visual insights such as word clouds and skill frequency graphs.
+Can be easily deployed with a user interface such as Streamlit or Flask.
 
-## How can I edit this code?
+Dataset Information
+The project uses cleaned job description data along with resume data. These documents are categorized into multiple job domains such as:
+Data Science
+Software Engineering
+Human Resources
+Finance
+Marketing
+Aviation
+and Others
 
-There are several ways of editing your application.
+The primary dataset used: 
+from kaggle /kaggle/input/job-description-resume/cleaned_jobs.csv
+Tech Stack Used
+Python for overall development.
+Pandas and NumPy for data cleaning and manipulation.
+NLTK and spaCy for NLP tasks like tokenizing, stopword removal, skill extraction, and named entity recognition.
+Scikit-Learn for building classification models.
+Matplotlib and WordCloud for creating visual insights like category frequency graphs and skill clouds.
+SBERT embeddings for semantic representations and matching.
 
-**Use Lovable**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e2c8fc4b-1667-4976-ae4b-5364d4172f3c) and start prompting.
 
-Changes made via Lovable will be committed automatically to this repo.
 
 **Use your preferred IDE**
 
